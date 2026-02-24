@@ -1,10 +1,10 @@
 // // https://randomnerdtutorials.com/esp32-bluetooth-low-energy-ble-arduino-ide/
 // // https://github.com/nkolban/ESP32_BLE_Arduino/blob/master/examples/BLE_notify/BLE_notify.ino
 // // https://www.electronicshub.org/esp32-ble-tutorial/
-// #include <M5Core2.h>
 // #include <BLEDevice.h>
 // #include <BLEServer.h>
 // #include <BLE2902.h>
+// #include <M5Unified.h>
 
 
 // ///////////////////////////////////////////////////////////////
