@@ -19,8 +19,8 @@
 // int timer = 0;
 
 // // See the following for generating UUIDs: https://www.uuidgenerator.net/
-// #define SERVICE_UUID        "1a1689e5-df18-4c23-b69a-d12aa2a557ee"
-// #define CHARACTERISTIC_UUID "6df7c881-e712-4000-8bbe-755a9f961755"
+// #define SERVICE_UUID        "4d92ed41-94fc-43a2-a9e6-e17e7f804d02"
+// #define CHARACTERISTIC_UUID "99f63e2d-8c68-4206-b763-da326c24009a"
 
 // // Bluetooth callback methods
 // class myServerCallbacks: public BLEServerCallbacks {

@@ -10,15 +10,19 @@
 // ///////////////////////////////////////////////////////////////
 // // Variables
 // ///////////////////////////////////////////////////////////////
-// static BLERemoteCharacteristic *pRemoteCharacteristic;
-// static BLEAdvertisedDevice *myDevice;
+// static BLERemoteCharacteristic *bleRemoteCharacteristic;
+// static BLEAdvertisedDevice *bleRemoteServer;
 // static boolean doConnect = false;
 // static boolean doScan = false;
 // bool deviceConnected = false;
 
 // // See the following for generating UUIDs: https://www.uuidgenerator.net/
-// static BLEUUID SERVICE_UUID("4fafc201-1fb5-459e-8fcc-c5c9c331914b"); // Dr. Dan's Service
-// static BLEUUID CHARACTERISTIC_UUID("beb5483e-36e1-4688-b7f5-ea07361b26a8"); // Dr. Dan's Characteristic
+// static BLEUUID SERVICE_UUID("4d92ed41-94fc-43a2-a9e6-e17e7f804d02"); 
+// static BLEUUID CHARACTERISTIC_UUID("99f63e2d-8c68-4206-b763-da326c24009a"); 
+
+// // BLE Broadcast name
+
+// static String BLE_BROADCAST_NAME = "Elijah M5Core2";
 
 // ///////////////////////////////////////////////////////////////
 // // Forward Declarations
@@ -31,8 +35,12 @@
 // // connected to NOTIFIES this client (or any client listening)
 // // that it has changed the remote characteristic
 // ///////////////////////////////////////////////////////////////
-// static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic,uint8_t *pData, size_t length, bool isNotify)
+// static void notifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 // {
+//     Serial.printf("Notify callback for characteristic %s of data length %d\n", pBLERemoteCharacteristic->getUUID().toString().c_str(), length);
+//     Serial.printf("\tData: %s", (char *)pData);
+//     std::string value = pBLERemoteCharacteristic->readValue();
+//     Serial.printf("\tValue was: %s", value.c_str());
 // }
 
 // ///////////////////////////////////////////////////////////////
@@ -61,20 +69,50 @@
 // bool connectToServer()
 // {
 //     // Create the client
+//     Serial.printf("Forming a connection to %s\n", bleRemoteServer->getName().c_str());
+//     BLEClient *bleClient = BLEDevice::createClient();
+//     bleClient->setClientCallbacks(new MyClientCallback());
+//     Serial.println("\tClient Connected");
 
 //     // Connect to the remove BLE Server.
+//     if(!bleClient->connect(bleRemoteServer)) {
+//         Serial.printf("Failed to connect to server (%s)\n", bleRemoteServer->getName().c_str());
+//     }
+//     Serial.printf("\tConnected tp server (%s)\n", bleRemoteServer->getName().c_str());
 
 //     // Obtain a reference to the service we are after in the remote BLE server.
-
+//     BLERemoteService *bleRemoteService = bleClient->getService(SERVICE_UUID);
+//     if (bleRemoteService == nullptr) {
+//         Serial.printf("Failed to find our service UUID: %s\n", SERVICE_UUID.toString().c_str());
+//         bleClient->disconnect();
+//         return false;
+//     }
+//     Serial.printf("\tFound our service UUID: %s\n", SERVICE_UUID.toString().c_str());
 
 //     // Obtain a reference to the characteristic in the service of the remote BLE server.
+//     bleRemoteCharacteristic = bleRemoteService->getCharacteristic(CHARACTERISTIC_UUID);
+//     if (bleRemoteCharacteristic == nullptr) {
+//         Serial.printf("Failed to find our characteristic: %s\n", CHARACTERISTIC_UUID.toString().c_str());
+//         bleClient->disconnect();
+//         return false;
+//     }
+//     Serial.printf("\tFound our charcteristic: %s\n", CHARACTERISTIC_UUID.toString().c_str());
 
 //     // Read the value of the characteristic.
+//     if(bleRemoteCharacteristic->canRead()) {
+//         std::string value = bleRemoteCharacteristic->readValue();
+//         Serial.printf("The characteristic value was: %s", value.c_str());
+//         drawScreenTextWithBackground("Initial characteristic value from server:\n\n" + String(value.c_str()), TFT_GREEN);
+//         delay(3000);
+//     }
 
 //     // Check if server's characteristic can notify client of changes and register to listen if so
+//     if (bleRemoteCharacteristic->canNotify()) {
+//         bleRemoteCharacteristic->registerForNotify(notifyCallback);
+//     }
 
-
-//     deviceConnected = true;
+//     // deviceConnected = true;
+//     return true;
 // }
 
 // ///////////////////////////////////////////////////////////////
@@ -89,18 +127,26 @@
 //     void onResult(BLEAdvertisedDevice advertisedDevice)
 //     {
 //         // Print device found
-
+//         Serial.print("BLE Advertised Device Found");
+//         Serial.printf("\tName: %s\n", advertisedDevice.getName().c_str());
 
 //         // More debugging print
-//         //Serial.printf("\tAddress: %s\n", advertisedDevice.getAddress().toString().c_str());
-//         //Serial.printf("\tHas a ServiceUUID: %s\n", advertisedDevice.haveServiceUUID() ? "True" : "False");
-//         //for (int i = 0; i < advertisedDevice.getServiceUUIDCount(); i++) {
-//         //    Serial.printf("\t\t%s\n", advertisedDevice.getServiceUUID(i).toString().c_str());
-//         //}
-//         //Serial.printf("\tHas our service: %s\n\n", advertisedDevice.isAdvertisingService(SERVICE_UUID) ? "True" : "False");
+//         Serial.printf("\tAddress: %s\n", advertisedDevice.getAddress().toString().c_str());
+//         Serial.printf("\tHas a ServiceUUID: %s\n", advertisedDevice.haveServiceUUID() ? "True" : "False");
+//         for (int i = 0; i < advertisedDevice.getServiceUUIDCount(); i++) {
+//            Serial.printf("\t\t%s\n", advertisedDevice.getServiceUUID(i).toString().c_str());
+//         }
+//         Serial.printf("\tHas our service: %s\n\n", advertisedDevice.isAdvertisingService(SERVICE_UUID) ? "True" : "False");
         
 //         // We have found a device, let us now see if it contains the service we are looking for.
-
+//         if (advertisedDevice.haveServiceUUID() && 
+//         advertisedDevice.isAdvertisingService(SERVICE_UUID) &&
+//         advertisedDevice.getName() == BLE_BROADCAST_NAME.c_str()) {
+//             BLEDevice::getScan()->stop();
+//             bleRemoteServer = new BLEAdvertisedDevice(advertisedDevice);
+//             doConnect = true;
+//             doScan = true;
+//         }
 //     }     
 // };        
 
@@ -152,7 +198,7 @@
 //         Serial.println("Setting new characteristic value to \"" + newValue + "\"");
 
 //         // Set the characteristic's value to be the array of bytes that is actually a string.
-//         pRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
+//         bleRemoteCharacteristic->writeValue(newValue.c_str(), newValue.length());
 //         drawScreenTextWithBackground("Wrote value to server: " + String(newValue.c_str()), TFT_YELLOW); // Give feedback on screen
 //     }
 //     else if (doScan)
