@@ -72,6 +72,8 @@ bool shouldScan = true;
 bool isConnected = false;
 unsigned long lastScanAttemptMs = 0;
 String statusLine = "Booting...";
+volatile bool disconnectEventPending = false;
+volatile bool remotePositionUpdated = false;
 
 ///////////////////////////////////////////////////////////////
 // Forward declarations
@@ -99,7 +101,7 @@ class ClientCallbacks : public BLEClientCallbacks {
   void onDisconnect(BLEClient *client) override {
     (void)client;
     Serial.println("[CLIENT] Disconnected callback fired.");
-    resetClientState("Disconnected. Rescanning...");
+    disconnectEventPending = true;
   }
 };
 
@@ -119,13 +121,7 @@ static void notifyCallback(BLERemoteCharacteristic *pChar, uint8_t *pData, size_
     remotePosX = parsedX;
     remotePosY = parsedY;
     hasRemotePosition = true;
-    Serial.printf("[CLIENT] Notify remote position = (%d, %d)\n", remotePosX, remotePosY);
-
-    if (!gameOver && checkCollision()) {
-      gameTimeSeconds = (millis() - gameStartMs) / 1000.0f;
-      gameOver = true;
-      drawGameOverScreen(gameTimeSeconds);
-    }
+    remotePositionUpdated = true;
   } else {
     Serial.printf("[CLIENT] Invalid notify payload: '%s'\n", payload.c_str());
   }
@@ -300,6 +296,11 @@ void setup() {
 void loop() {
   M5.update();
 
+  if (disconnectEventPending) {
+    disconnectEventPending = false;
+    resetClientState("Disconnected. Rescanning...");
+  }
+
   if (gameOver) {
     delay(40);
     return;
@@ -335,7 +336,11 @@ void loop() {
     return;
   }
 
-  if (millis() - lastDrawMs >= DISPLAY_REFRESH_MS) {
+  if (remotePositionUpdated) {
+    remotePositionUpdated = false;
+    drawMainScreen();
+    lastDrawMs = millis();
+  } else if (millis() - lastDrawMs >= DISPLAY_REFRESH_MS) {
     lastDrawMs = millis();
     drawMainScreen();
   }
